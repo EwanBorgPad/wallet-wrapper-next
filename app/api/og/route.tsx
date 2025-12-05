@@ -98,28 +98,17 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
     : '/previews/builder.png'
   
   // Load the background image - use absolute URL for @vercel/og
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:3000')
+  // In production, use the actual domain
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
   const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
   const imageUrl = `${cleanBaseUrl}${imagePath}`
   
-  // Fetch the image and convert to base64 for @vercel/og (Edge runtime compatible)
-  let imageDataUrl: string | null = null
-  try {
-    const imageResponse = await fetch(imageUrl)
-    if (imageResponse.ok) {
-      const imageBuffer = await imageResponse.arrayBuffer()
-      // Convert ArrayBuffer to base64 without Buffer (Edge compatible)
-      const bytes = new Uint8Array(imageBuffer)
-      const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
-      const base64 = btoa(binary)
-      const mimeType = imageResponse.headers.get('content-type') || 'image/png'
-      imageDataUrl = `data:${mimeType};base64,${base64}`
-    }
-  } catch (error) {
-    console.error('Error loading background image:', error)
-  }
+  console.log('Generating OG image with params:', { code, pseudo, type, imageUrl })
+  
+  // Use the direct URL - @vercel/og supports public URLs
+  // The image must be accessible from the Edge runtime
+  const imageDataUrl = imageUrl
 
     return new ImageResponse(
       (
@@ -132,6 +121,7 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#000000',
+            backgroundImage: imageDataUrl ? 'none' : 'linear-gradient(to bottom right, #1a1a2e, #16213e)',
             position: 'relative',
           }}
         >
@@ -151,6 +141,34 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
           />
         )}
         
+        {/* Background gradient circles if no image */}
+        {!imageDataUrl && (
+          <>
+            <div
+              style={{
+                position: 'absolute',
+                top: '-20%',
+                left: '-10%',
+                width: '500px',
+                height: '500px',
+                background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
+                borderRadius: '50%',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '-20%',
+                right: '-10%',
+                width: '500px',
+                height: '500px',
+                background: 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)',
+                borderRadius: '50%',
+              }}
+            />
+          </>
+        )}
+        
         {/* Overlay gradient for better text readability */}
         <div
           style={{
@@ -159,7 +177,9 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)',
+            background: imageDataUrl 
+              ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)'
+              : 'transparent',
           }}
         />
         
@@ -256,7 +276,13 @@ export async function GET(request: NextRequest) {
     
     // If we have code, generate ref-based OG image
     if (code) {
-      return generateRefOGImage(code, pseudo, type)
+      try {
+        return await generateRefOGImage(code, pseudo, type)
+      } catch (error: any) {
+        console.error('Error generating ref OG image:', error)
+        // Fallback to default image on error
+        return generateDefaultOGImage()
+      }
     }
     
     // Otherwise, use the existing wallet-based OG image
