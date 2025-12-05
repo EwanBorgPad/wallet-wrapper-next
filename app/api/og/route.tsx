@@ -106,9 +106,31 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
   
   console.log('Generating OG image with params:', { code, pseudo, type, imageUrl })
   
-  // Use the direct URL - @vercel/og supports public URLs
-  // The image must be accessible from the Edge runtime
-  const imageDataUrl = imageUrl
+  // Fetch the image and convert to base64 for @vercel/og (Edge runtime compatible)
+  let imageDataUrl: string | null = null
+  try {
+    console.log('Fetching image from:', imageUrl)
+    const imageResponse = await fetch(imageUrl, {
+      headers: {
+        'Accept': 'image/png,image/*,*/*',
+      },
+    })
+    
+    if (imageResponse.ok) {
+      const imageBuffer = await imageResponse.arrayBuffer()
+      // Convert ArrayBuffer to base64 without Buffer (Edge compatible)
+      const bytes = new Uint8Array(imageBuffer)
+      const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+      const base64 = btoa(binary)
+      const mimeType = imageResponse.headers.get('content-type') || 'image/png'
+      imageDataUrl = `data:${mimeType};base64,${base64}`
+      console.log('Image loaded successfully, size:', imageBuffer.byteLength, 'bytes')
+    } else {
+      console.error('Failed to load image, status:', imageResponse.status, imageResponse.statusText)
+    }
+  } catch (error) {
+    console.error('Error loading background image:', error)
+  }
 
     return new ImageResponse(
       (
