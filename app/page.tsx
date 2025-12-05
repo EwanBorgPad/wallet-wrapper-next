@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 import SolanaWrappedApp from './components/SolanaWrappedApp'
 
 type Props = {
@@ -30,9 +31,43 @@ async function getUserByReferralCode(ref: string): Promise<{ monkeType?: string;
 export async function generateMetadata(
   { searchParams }: Props
 ): Promise<Metadata> {
+  // Try to get ref from searchParams first
   const params = await searchParams
-  const ref = typeof params.ref === 'string' ? params.ref : undefined
-  const address = typeof params.address === 'string' ? params.address : undefined
+  console.log('🔍 Raw searchParams:', JSON.stringify(params))
+  
+  let ref = typeof params.ref === 'string' ? params.ref : undefined
+  let address = typeof params.address === 'string' ? params.address : undefined
+  
+  // Fallback: try to get from headers if searchParams doesn't work
+  // In Next.js 15, searchParams might not be available in generateMetadata with Suspense
+  if (!ref && !address) {
+    try {
+      const headersList = await headers()
+      // Try multiple header sources
+      const referer = headersList.get('referer')
+      const host = headersList.get('host')
+      const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '/'
+      
+      // Construct URL from headers
+      const protocol = headersList.get('x-forwarded-proto') || 'https'
+      const fullUrl = referer || (host ? `${protocol}://${host}${pathname}` : '')
+      
+      if (fullUrl) {
+        try {
+          const urlObj = new URL(fullUrl)
+          const refParam = urlObj.searchParams.get('ref')
+          const addressParam = urlObj.searchParams.get('address')
+          if (refParam) ref = refParam
+          if (addressParam) address = addressParam
+          console.log('🔍 Got from headers - ref:', ref, 'address:', address, 'from URL:', fullUrl)
+        } catch (urlError) {
+          console.error('Error parsing URL from headers:', urlError)
+        }
+      }
+    } catch (e) {
+      console.error('Error getting params from headers:', e)
+    }
+  }
 
   // Default OG - generate via API if no specific params
   let ogImage = '/api/og'
