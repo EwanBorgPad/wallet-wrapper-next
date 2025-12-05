@@ -179,25 +179,36 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
             position: 'relative',
           }}
         >
-        {/* Background image */}
-        {imageDataUrl && (
-          <img
-            src={imageDataUrl}
-            alt=""
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
-        )}
-        
-        {/* Background gradient circles if no image */}
-        {!imageDataUrl && (
-          <>
+        {/* Background layer wrapper */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            display: 'block',
+          }}
+        >
+          {/* Background image */}
+          {imageDataUrl && (
+            <img
+              src={imageDataUrl}
+              alt=""
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          )}
+          
+          {/* Background gradient circles if no image */}
+          {!imageDataUrl && (
             <div
               style={{
                 position: 'absolute',
@@ -207,8 +218,11 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
                 height: '500px',
                 background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
                 borderRadius: '50%',
+                display: 'block',
               }}
             />
+          )}
+          {!imageDataUrl && (
             <div
               style={{
                 position: 'absolute',
@@ -218,24 +232,26 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
                 height: '500px',
                 background: 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)',
                 borderRadius: '50%',
+                display: 'block',
               }}
             />
-          </>
-        )}
-        
-        {/* Overlay gradient for better text readability */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: imageDataUrl 
-              ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)'
-              : 'transparent',
-          }}
-        />
+          )}
+          
+          {/* Overlay gradient for better text readability */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: imageDataUrl 
+                ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)'
+                : 'transparent',
+              display: 'block',
+            }}
+          />
+        </div>
         
         {/* Content */}
         <div
@@ -247,6 +263,7 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
             padding: '60px',
             zIndex: 1,
             textAlign: 'center',
+            position: 'relative',
           }}
         >
           {/* Title */}
