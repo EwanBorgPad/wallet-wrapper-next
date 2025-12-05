@@ -106,32 +106,64 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
   
   console.log('Generating OG image with params:', { code, pseudo, type, imageUrl })
   
-  // Fetch the image and convert to base64 for @vercel/og (Edge runtime compatible)
+  // Try to use the image URL directly first (simpler and more efficient)
+  // @vercel/og supports public URLs if they're accessible
   let imageDataUrl: string | null = null
-  try {
-    console.log('Fetching image from:', imageUrl)
-    const imageResponse = await fetch(imageUrl, {
-      headers: {
-        'Accept': 'image/png,image/*,*/*',
-      },
-    })
-    
-    if (imageResponse.ok) {
-      const imageBuffer = await imageResponse.arrayBuffer()
-      // Convert ArrayBuffer to base64 without Buffer (Edge compatible)
-      const bytes = new Uint8Array(imageBuffer)
-      const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
-      const base64 = btoa(binary)
-      const mimeType = imageResponse.headers.get('content-type') || 'image/png'
-      imageDataUrl = `data:${mimeType};base64,${base64}`
-      console.log('Image loaded successfully, size:', imageBuffer.byteLength, 'bytes')
-    } else {
-      console.error('Failed to load image, status:', imageResponse.status, imageResponse.statusText)
+  
+  // For production URLs, try using the direct URL first
+  if (imageUrl.startsWith('https://')) {
+    // Test if the image is accessible
+    try {
+      const testResponse = await fetch(imageUrl, { method: 'HEAD' })
+      if (testResponse.ok) {
+        imageDataUrl = imageUrl
+        console.log('Using direct image URL:', imageUrl)
+      } else {
+        console.log('Direct URL not accessible, will try base64 conversion')
+      }
+    } catch (e) {
+      console.log('Error testing direct URL, will try base64 conversion:', e)
     }
-  } catch (error) {
-    console.error('Error loading background image:', error)
+  }
+  
+  // If direct URL didn't work, try fetching and converting to base64
+  if (!imageDataUrl) {
+    try {
+      console.log('Fetching image from:', imageUrl)
+      const imageResponse = await fetch(imageUrl, {
+        headers: {
+          'Accept': 'image/png,image/*,*/*',
+        },
+      })
+      
+      if (imageResponse.ok) {
+        const imageBuffer = await imageResponse.arrayBuffer()
+        console.log('Image buffer received, size:', imageBuffer.byteLength, 'bytes')
+        
+        // Limit base64 conversion to avoid issues with very large images
+        if (imageBuffer.byteLength > 5 * 1024 * 1024) { // 5MB limit
+          console.warn('Image too large for base64 conversion, using direct URL instead')
+          imageDataUrl = imageUrl
+        } else {
+          // Convert ArrayBuffer to base64 without Buffer (Edge compatible)
+          const bytes = new Uint8Array(imageBuffer)
+          const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+          const base64 = btoa(binary)
+          const mimeType = imageResponse.headers.get('content-type') || 'image/png'
+          imageDataUrl = `data:${mimeType};base64,${base64}`
+          console.log('Image converted to base64, data URL length:', imageDataUrl.length, 'chars')
+        }
+      } else {
+        console.error('Failed to load image, status:', imageResponse.status, imageResponse.statusText)
+      }
+    } catch (error: any) {
+      console.error('Error loading background image:', error?.message || error)
+    }
   }
 
+  console.log('Generating ImageResponse, imageDataUrl exists:', !!imageDataUrl, 'type:', imageDataUrl?.substring(0, 20))
+
+  try {
     return new ImageResponse(
       (
         <div
@@ -284,7 +316,11 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     }
-  )
+    )
+  } catch (error: any) {
+    console.error('Error creating ImageResponse:', error?.message || error)
+    throw error
+  }
 }
 
 export async function GET(request: NextRequest) {
