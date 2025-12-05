@@ -839,7 +839,7 @@ function SolanaWrappedAppContent() {
     <div className="font-sans antialiased bg-black min-h-screen text-white overflow-hidden">
       <AnimatePresence mode="wait">
         {view === 'landing' && (
-          <Landing key="landing" onGenerate={fetchWalletData} loading={view === 'loading'} error={error} />
+          <Landing key="landing" onGenerate={fetchWalletData} loading={false} error={error} />
         )}
 
         {view === 'loading' && (
