@@ -6,18 +6,68 @@ type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
+// Helper function to get user by referral code
+// TODO: Replace this with your actual database/API call
+async function getUserByReferralCode(ref: string): Promise<{ monkeType?: string; referralCode?: string; username?: string } | null> {
+  // This is a placeholder - replace with your actual implementation
+  // Example: const user = await db.user.findUnique({ where: { referralCode: ref } })
+  
+  // For now, return null to use default OG image
+  // You can uncomment and modify this to return mock data for testing:
+  /*
+  if (ref === 'TQ8W9I') {
+    return {
+      monkeType: 'builder',
+      referralCode: 'TQ8W9I',
+      username: 'Test User'
+    }
+  }
+  */
+  
+  return null
+}
+
 export async function generateMetadata(
   { searchParams }: Props
 ): Promise<Metadata> {
   const params = await searchParams
+  const ref = typeof params.ref === 'string' ? params.ref : undefined
   const address = typeof params.address === 'string' ? params.address : undefined
 
   // Default OG
   let ogImage = '/logo/open-graph.png'
   
-  console.log('🎨 Generating Metadata for address:', address)
+  console.log('🎨 Generating Metadata for ref:', ref, 'address:', address)
 
-  if (address) {
+  // Check for ref parameter first (for referral codes)
+  if (ref) {
+    try {
+      const user = await getUserByReferralCode(ref)
+      
+      if (user && user.monkeType) {
+        console.log('🐵 Found User:', user.monkeType, user.username)
+        
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : 'http://localhost:3000')
+        
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+        
+        // Point to dynamic API route
+        const queryParams = new URLSearchParams({
+          type: user.monkeType,
+          code: user.referralCode || ref,
+          username: user.username || 'Anon'
+        })
+        
+        ogImage = `/api/og?${queryParams.toString()}`
+      }
+    } catch (e) {
+      console.error('❌ Error fetching dynamic OG for ref:', e)
+    }
+  } 
+  // Otherwise, check for address parameter (for wallet addresses)
+  else if (address) {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}` 

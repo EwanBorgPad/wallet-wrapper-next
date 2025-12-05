@@ -3,10 +3,171 @@ import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
+async function generateRefOGImage(code: string, pseudo: string, type: string) {
+  // Determine which image to use based on type
+  const imagePath = type === 'degen' 
+    ? '/previews/degen.png' 
+    : '/previews/builder.png'
+  
+  // Load the background image - use absolute URL for @vercel/og
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000')
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const imageUrl = `${cleanBaseUrl}${imagePath}`
+  
+  // Fetch the image and convert to base64 for @vercel/og (Edge runtime compatible)
+  let imageDataUrl: string | null = null
+  try {
+    const imageResponse = await fetch(imageUrl)
+    if (imageResponse.ok) {
+      const imageBuffer = await imageResponse.arrayBuffer()
+      // Convert ArrayBuffer to base64 without Buffer (Edge compatible)
+      const bytes = new Uint8Array(imageBuffer)
+      const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+      const base64 = btoa(binary)
+      const mimeType = imageResponse.headers.get('content-type') || 'image/png'
+      imageDataUrl = `data:${mimeType};base64,${base64}`
+    }
+  } catch (error) {
+    console.error('Error loading background image:', error)
+  }
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#000000',
+          position: 'relative',
+        }}
+      >
+        {/* Background image */}
+        {imageDataUrl && (
+          <img
+            src={imageDataUrl}
+            alt=""
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        )}
+        
+        {/* Overlay gradient for better text readability */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)',
+          }}
+        />
+        
+        {/* Content */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px',
+            zIndex: 1,
+            textAlign: 'center',
+          }}
+        >
+          {/* Title */}
+          <h1
+            style={{
+              fontSize: '72px',
+              fontWeight: '900',
+              background: 'linear-gradient(to right, #06B6D4, #8B5CF6, #10B981)',
+              backgroundClip: 'text',
+              color: 'transparent',
+              margin: '0 0 20px 0',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            SOLANA WRAPPED
+          </h1>
+          
+          {/* Username/Pseudo */}
+          <div
+            style={{
+              fontSize: '48px',
+              fontWeight: '700',
+              color: '#FFFFFF',
+              marginBottom: '16px',
+            }}
+          >
+            {pseudo}
+          </div>
+          
+          {/* Code */}
+          <div
+            style={{
+              fontSize: '32px',
+              fontWeight: '600',
+              color: '#9CA3AF',
+              fontFamily: 'monospace',
+              letterSpacing: '0.1em',
+              marginBottom: '24px',
+            }}
+          >
+            Code: {code}
+          </div>
+          
+          {/* Type badge */}
+          <div
+            style={{
+              backgroundColor: type === 'degen' ? 'rgba(236, 72, 153, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+              color: type === 'degen' ? '#EC4899' : '#3B82F6',
+              padding: '12px 24px',
+              borderRadius: '9999px',
+              fontSize: '24px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            {type === 'degen' ? 'Degen' : 'Builder'}
+          </div>
+        </div>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 630,
+    }
+  )
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     
+    // Check if this is a ref-based OG image (code, pseudo, type)
+    const code = searchParams.get('code')
+    const pseudo = searchParams.get('pseudo') || searchParams.get('username') || 'Anon'
+    const type = searchParams.get('type') || 'builder'
+    
+    // If we have code, generate ref-based OG image
+    if (code) {
+      return generateRefOGImage(code, pseudo, type)
+    }
+    
+    // Otherwise, use the existing wallet-based OG image
     // Get parameters from query string
     const address = searchParams.get('address') || ''
     let txCount = searchParams.get('txCount') || '0'
