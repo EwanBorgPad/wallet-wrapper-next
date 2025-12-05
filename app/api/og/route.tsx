@@ -121,7 +121,7 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#000000',
-            backgroundImage: imageDataUrl ? 'none' : 'linear-gradient(to bottom right, #1a1a2e, #16213e)',
+            ...(imageDataUrl ? {} : { backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #16213e)' }),
             position: 'relative',
           }}
         >

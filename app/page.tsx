@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import SolanaWrappedApp from './components/SolanaWrappedApp'
 
@@ -178,9 +177,6 @@ export async function generateMetadata(
 }
 
 export default function Page() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SolanaWrappedApp />
-    </Suspense>
-  )
+  // Suspense is already handled inside SolanaWrappedApp component
+  return <SolanaWrappedApp />
 }
