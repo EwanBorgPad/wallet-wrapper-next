@@ -44,16 +44,16 @@ export async function generateMetadata(
     try {
       const user = await getUserByReferralCode(ref)
       
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : 'http://localhost:3000')
+      
+      const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+      
       if (user && user.monkeType) {
         console.log('🐵 Found User:', user.monkeType, user.username)
         
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:3000')
-        
-        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
-        
-        // Point to dynamic API route
+        // Point to dynamic API route with user data
         const queryParams = new URLSearchParams({
           type: user.monkeType,
           code: user.referralCode || ref,
@@ -61,9 +61,38 @@ export async function generateMetadata(
         })
         
         ogImage = `/api/og?${queryParams.toString()}`
+      } else {
+        // No user found in DB, but we have a ref - generate OG with default values (builder)
+        console.log('🐵 No user found for ref:', ref, '- using default builder image')
+        
+        const queryParams = new URLSearchParams({
+          type: 'builder',
+          code: ref,
+          username: 'Anon'
+        })
+        
+        ogImage = `/api/og?${queryParams.toString()}`
       }
     } catch (e) {
       console.error('❌ Error fetching dynamic OG for ref:', e)
+      // On error, still try to generate with default values
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : 'http://localhost:3000')
+        
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+        
+        const queryParams = new URLSearchParams({
+          type: 'builder',
+          code: ref,
+          username: 'Anon'
+        })
+        
+        ogImage = `/api/og?${queryParams.toString()}`
+      } catch (err) {
+        console.error('❌ Error generating fallback OG:', err)
+      }
     }
   } 
   // Otherwise, check for address parameter (for wallet addresses)
