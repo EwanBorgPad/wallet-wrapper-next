@@ -3,6 +3,94 @@ import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
+function generateDefaultOGImage() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#000000',
+          backgroundImage: 'linear-gradient(to bottom right, #1a1a2e, #16213e)',
+          fontFamily: 'system-ui, -apple-system',
+        }}
+      >
+        {/* Background gradient circles */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '-20%',
+            left: '-10%',
+            width: '500px',
+            height: '500px',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
+            borderRadius: '50%',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-20%',
+            right: '-10%',
+            width: '500px',
+            height: '500px',
+            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)',
+            borderRadius: '50%',
+          }}
+        />
+
+        {/* Main content */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px',
+            zIndex: 1,
+          }}
+        >
+          <h1
+            style={{
+              fontSize: '72px',
+              fontWeight: '900',
+              background: 'linear-gradient(to right, #06B6D4, #8B5CF6, #10B981)',
+              backgroundClip: 'text',
+              color: 'transparent',
+              margin: '0 0 20px 0',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            SOLANA WRAPPED
+          </h1>
+          <p
+            style={{
+              fontSize: '32px',
+              color: '#9CA3AF',
+              margin: 0,
+              fontWeight: '300',
+            }}
+          >
+            2025 EDITION
+          </p>
+        </div>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 630,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    }
+  )
+}
+
 async function generateRefOGImage(code: string, pseudo: string, type: string) {
   // Determine which image to use based on type
   const imagePath = type === 'degen' 
@@ -33,20 +121,20 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
     console.error('Error loading background image:', error)
   }
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#000000',
-          position: 'relative',
-        }}
-      >
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#000000',
+            position: 'relative',
+          }}
+        >
         {/* Background image */}
         {imageDataUrl && (
           <img
@@ -149,6 +237,10 @@ async function generateRefOGImage(code: string, pseudo: string, type: string) {
     {
       width: 1200,
       height: 630,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
     }
   )
 }
@@ -170,6 +262,12 @@ export async function GET(request: NextRequest) {
     // Otherwise, use the existing wallet-based OG image
     // Get parameters from query string
     const address = searchParams.get('address') || ''
+    
+    // If no address provided, return default OG image
+    if (!address) {
+      return generateDefaultOGImage()
+    }
+    
     let txCount = searchParams.get('txCount') || '0'
     let activeDays = searchParams.get('activeDays') || '0'
     let topProtocol = searchParams.get('topProtocol') || 'Solana'
@@ -574,12 +672,19 @@ export async function GET(request: NextRequest) {
       {
         width: 1200,
         height: 630,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
       }
     )
   } catch (e: any) {
     console.log(`${e.message}`)
     return new Response(`Failed to generate the image`, {
       status: 500,
+      headers: {
+        'Content-Type': 'text/plain',
+      },
     })
   }
 }

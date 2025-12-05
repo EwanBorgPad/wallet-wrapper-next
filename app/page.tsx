@@ -34,8 +34,8 @@ export async function generateMetadata(
   const ref = typeof params.ref === 'string' ? params.ref : undefined
   const address = typeof params.address === 'string' ? params.address : undefined
 
-  // Default OG
-  let ogImage = '/logo/open-graph.png'
+  // Default OG - generate via API if no specific params
+  let ogImage = '/api/og'
   
   console.log('🎨 Generating Metadata for ref:', ref, 'address:', address)
 
